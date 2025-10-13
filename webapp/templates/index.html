@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4 d-flex gap-2">
+  <a href="/report/maquinas" class="btn btn-success">📄 Exportar PDF</a>
+  <a href="/maquinas/add" class="btn btn-primary">Adicionar</a>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'linha' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=linha&direcao={{ toggled }}" class="text-decoration-none">
+          Linha {% if ordenar_por == 'linha' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'nome' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=nome&direcao={{ toggled }}" class="text-decoration-none">
+          Nome {% if ordenar_por == 'nome' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'usuario' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=usuario&direcao={{ toggled }}" class="text-decoration-none">
+          Usuário {% if ordenar_por == 'usuario' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'setor' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=setor&direcao={{ toggled }}" class="text-decoration-none">
+          Setor {% if ordenar_por == 'setor' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'andar' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=andar&direcao={{ toggled }}" class="text-decoration-none">
+          Andar {% if ordenar_por == 'andar' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'ip' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=ip&direcao={{ toggled }}" class="text-decoration-none">
+          IP {% if ordenar_por == 'ip' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'mac' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=mac&direcao={{ toggled }}" class="text-decoration-none">
+          Endereço MAC {% if ordenar_por == 'mac' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'ponto' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=ponto&direcao={{ toggled }}" class="text-decoration-none">
+          Ponto {% if ordenar_por == 'ponto' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'comentario' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/?ordenar_por=comentario&direcao={{ toggled }}" class="text-decoration-none">
+          Comentário {% if ordenar_por == 'comentario' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th colspan="3">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% if maquinas %}
+  {% for m in maquinas %}
+    <tr>
+      <td>{{ m.linha }}</td>
+      <td>{{ m.nome }}</td>
+      <td>{{ m.usuario }}</td>
+      <td>{{ m.setor }}</td>
+      <td>{{ m.andar }}</td>
+      <td>{{ m.ip }}</td>
+      <td>{{ m.mac }}</td>
+      <td>{{ m.ponto }}</td>
+      <td>{{ m.comentario }}</td>
+      <td><a href="/maquinas/edit/{{ m.id }}" class="btn btn-sm btn-warning">Editar</a></td>
+      <td><a href="/maquinas/delete/{{ m.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta máquina?');">Excluir</a></td>
+      <td><a href="/historico?maquina={{ m.id }}" class="btn btn-sm btn-info text-white">Histórico</a></td>
+    </tr>
+  {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="12" class="text-center">Nenhuma máquina cadastrada.</td>
+    </tr>
+  {% endif %}
+  </tbody>
+</table>
+{% endblock %}

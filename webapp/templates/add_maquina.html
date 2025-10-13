@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Adicionar Máquina</h2>
+<form action="/maquinas/add" method="post">
+  <div class="row g-3 mb-4">
+    <div class="col">
+      <label class="form-label">Nome</label>
+      <input name="nome" class="form-control" placeholder="Nome">
+    </div>
+    <div class="col">
+      <label class="form-label">Usuário</label>
+      <input name="usuario" class="form-control" placeholder="Usuário">
+    </div>
+    <div class="col">
+      <label class="form-label">Setor</label>
+      <input name="setor" class="form-control" placeholder="Setor">
+    </div>
+    <div class="col">
+      <label class="form-label">Andar</label>
+      <input name="andar" class="form-control" placeholder="Andar">
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col">
+      <label class="form-label">IP</label>
+      <input name="ip" class="form-control" placeholder="IP">
+    </div>
+    <div class="col">
+      <label class="form-label">MAC</label>
+      <input name="mac" class="form-control" placeholder="MAC">
+    </div>
+    <div class="col">
+      <label class="form-label">Ponto</label>
+      <input name="ponto" class="form-control" placeholder="Ponto">
+    </div>
+  </div>
+
+  <div class="col mb-4">
+    <label class="form-label">Comentário</label>
+    <input name="comentario" class="form-control" placeholder="Comentário">
+  </div>
+
+  <div class="col-auto mt-2">
+    <button class="btn btn-primary">Salvar</button>
+    <a href="/" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

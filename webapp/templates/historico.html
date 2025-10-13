@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+{% if maquina_filter %}
+  <h2>Histórico da Máquina
+    {% for mm in maquinas %}
+      {% if mm.id == maquina_filter %} - {{ mm.nome }}{% endif %}
+    {% endfor %}
+  </h2>
+
+  <div class="mb-3">
+    <a href="/" class="btn btn-secondary">← Voltar</a>
+  </div>
+
+  <form id="addHistoricoForm" action="/historico/add" method="post" class="mb-4">
+    <input type="hidden" name="id_maquina" value="{{ maquina_filter }}">
+    <div class="row g-2 mb-4">
+      <div class="col">
+        <label class="form-label">Data</label>
+        <input name="data" type="date" class="form-control" required>
+      </div>
+      <div class="col">
+        <label class="form-label">Hora</label>
+        <input name="hora" type="time" class="form-control" required>
+      </div>
+      <div class="col">
+        <label class="form-label">Responsável</label>
+        <input name="tecnico" class="form-control" placeholder="Responsavel">
+      </div>
+    </div>
+    <div class="col mb-4">
+      <label class="form-label">Descrição</label>
+      <input name="descricao" class="form-control" placeholder="Descrição" required>
+    </div>
+    <div class="col-auto mt-2"><button class="btn btn-primary">Adicionar</button></div>
+  </form>
+
+  <script>
+  // Enviar o formulário via fetch e redirecionar ao concluir para manter o filtro da máquina
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('addHistoricoForm');
+    if (form) {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const url = form.action;
+        const formData = new FormData(form);
+        try {
+          const resp = await fetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+          });
+          if (resp.ok) {
+            // redireciona para a página de histórico com o filtro da máquina
+            window.location.href = '/historico?maquina={{ maquina_filter }}';
+          } else {
+            const text = await resp.text();
+            alert('Falha ao adicionar histórico.' + (text ? '\\n' + text : ''));
+          }
+        } catch (err) {
+          alert('Erro de rede ao adicionar histórico.');
+        }
+      });
+    }
+
+    // Intercepta cliques nos links de excluir e faz a requisição via fetch,
+    // depois redireciona para manter o filtro da máquina.
+    document.addEventListener('click', async function (ev) {
+      const el = ev.target.closest('a.delete-historico');
+      if (!el) return;
+      ev.preventDefault();
+      const msg = el.dataset.confirm || 'Tem certeza que deseja excluir este item do histórico?';
+      if (!confirm(msg)) return;
+      try {
+        const resp = await fetch(el.href, {
+          method: 'GET',
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          window.location.href = '/historico?maquina={{ maquina_filter }}';
+        } else {
+          const text = await resp.text();
+          alert('Falha ao excluir.' + (text ? '\\n' + text : ''));
+        }
+      } catch (err) {
+        alert('Erro de rede ao excluir.');
+      }
+    });
+  });
+  </script>
+
+  <a href="/report/historico?maquina={{ maquina_filter }}" class="btn btn-success mb-3">📄 Exportar PDF</a>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Hora</th>
+        <th>Responsavel</th>
+        <th>Descrição</th>
+        <th>IP</th>
+        <th>MAC</th>
+        <th colspan="2">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in historico %}
+      <tr>
+        <td>{{h.data}}</td>
+        <td>{{h.hora}}</td>
+        <td>{{h.tecnico}}</td>
+        <td>{{h.descricao}}</td>
+        {% for m in maquinas %}
+          {% if m.id == h.id_maquina %}
+            <td>{{ m.ip }}</td>
+            <td>{{ m.mac }}</td>
+          {% endif %}
+        {% endfor %}
+        <td><a href="/historico/edit/{{h.id}}" class="btn btn-sm btn-warning">Editar</a></td>
+        <td><a href="/historico/delete/{{h.id}}" class="btn btn-sm btn-danger delete-historico" data-confirm="Tem certeza que deseja excluir este item do histórico?">Excluir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div class="alert alert-info">Esta página deve ser acessada a partir da lista de máquinas. Clique em "Histórico" na linha da máquina desejada.</div>
+  <a href="/" class="btn btn-secondary">Voltar</a>
+{% endif %}
+{% endblock %}
