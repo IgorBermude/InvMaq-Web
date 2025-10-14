@@ -41,9 +41,124 @@
     <input name="comentario" class="form-control" placeholder="Comentário">
   </div>
 
-  <div class="col-auto mt-2">
+  <div>
+    <!-- Div para adicionar componentes à máquina (envia JSON no campo hidden "componentes") -->
+    <!-- ADICIONADO: campo hidden que guarda o JSON de componentes -->
+    <input type="hidden" name="componentes" id="componentes_input" value="[]">
+
+    <div class="d-flex align-items-center mb-2 gap-2">
+      <h5 class="mb-0">Componentes</h5>
+      <button type="button" id="addComponentBtn" class="btn btn-sm btn-success ms-2">Adicionar Componente +</button>
+    </div>
+
+    <div id="componentsArea" class="mb-3"><!-- where dynamic forms appear --></div>
+  </div>
+
+  <div class="col-auto mt-2 mb-5">
     <button class="btn btn-primary">Salvar</button>
     <a href="/" class="btn btn-secondary">Cancelar</a>
   </div>
+
+  <script>
+    (function(){
+      let componentes = []; // mantido apenas em memória até o submit
+      let inputHidden = document.getElementById('componentes_input');
+      const addBtn = document.getElementById('addComponentBtn');
+      const componentsArea = document.getElementById('componentsArea');
+      const mainForm = document.querySelector('form[action="/maquinas/add"]');
+
+      // defensiva: se input ou tabela não existirem por algum motivo, crie-os
+      if(!inputHidden && mainForm){
+        inputHidden = document.createElement('input');
+        inputHidden.type = 'hidden';
+        inputHidden.name = 'componentes';
+        inputHidden.id = 'componentes_input';
+        inputHidden.value = '[]';
+        mainForm.appendChild(inputHidden);
+      }
+
+      function updateHidden() {
+        if(inputHidden) inputHidden.value = JSON.stringify(componentes);
+      }
+
+      function createFormCard() {
+        const card = document.createElement('div');
+        card.className = 'card mb-3';
+        card.innerHTML = `
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-md-4">
+                <label class="form-label">Nome</label>
+                <input class="form-control comp-input-nome" placeholder="Nome do componente">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Data aquisição</label>
+                <input type="date" class="form-control comp-input-dataaq">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Data expiração</label>
+                <input type="date" class="form-control comp-input-dataexp">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Observação</label>
+                <input class="form-control comp-input-obs" placeholder="Observação">
+              </div>
+              <div class="col-md-1 d-flex align-items-end">
+                <div class="d-grid gap-2">
+                  <button type="button" class="btn btn-sm btn-danger btn-cancel-comp">Excluir</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        card.querySelector('.btn-cancel-comp').addEventListener('click', () => {
+          card.remove();
+        });
+        return card;
+      }
+
+      // Ligar botão "Adicionar Componente" para inserir um novo form-card
+      if(addBtn){
+        addBtn.addEventListener('click', () => {
+          const card = createFormCard();
+          componentsArea.appendChild(card);
+          // opcional: focus no nome
+          const inputNome = card.querySelector('.comp-input-nome');
+          if(inputNome) inputNome.focus();
+        });
+      }
+
+      if(mainForm){
+        mainForm.addEventListener('submit', function(){
+          // Recria o array a partir dos cards visíveis no momento do submit
+          componentes = [];
+          const cards = Array.from(componentsArea.querySelectorAll('.card'));
+          cards.forEach(card => {
+            const nome = card.querySelector('.comp-input-nome').value.trim();
+            if(!nome) return;
+            const data_aq = card.querySelector('.comp-input-dataaq').value || null;
+            const data_exp = card.querySelector('.comp-input-dataexp').value || null;
+            const obs = card.querySelector('.comp-input-obs').value || '';
+            componentes.push({ nome, data_aquisicao: data_aq, data_expiracao: data_exp, observacao: obs });
+          });
+          updateHidden();
+        });
+      }
+
+      // Inicializa cards a partir do hidden se vier pré-carregado
+      try {
+        const initial = JSON.parse((inputHidden && inputHidden.value) || '[]');
+        if(Array.isArray(initial) && initial.length){
+          initial.forEach(comp => {
+            const card = createFormCard();
+            card.querySelector('.comp-input-nome').value = comp.nome || '';
+            card.querySelector('.comp-input-dataaq').value = comp.data_aquisicao || '';
+            card.querySelector('.comp-input-dataexp').value = comp.data_expiracao || '';
+            card.querySelector('.comp-input-obs').value = comp.observacao || '';
+            componentsArea.appendChild(card);
+          });
+        }
+      } catch(e) { /* ignore */ }
+    })();
+  </script>
 </form>
 {% endblock %}
