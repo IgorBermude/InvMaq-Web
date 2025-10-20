@@ -1,13 +1,16 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, File, UploadFile
 from typing import Optional
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi import HTTPException
+from fastapi.responses import Response
 
-from core.db import init_db
+from core.db import init_db, run_query
 from core.maquinas import listar_maquinas, adicionar_maquina, remover_maquina, atualizar_maquina
-from core.historico_maquinas import listar_historico, adicionar_historico, remover_historico, atualizar_historico
-from core.reports import gerar_pdf_maquinas, gerar_pdf_historico
+from core.historico_maquinas import listar_historico, adicionar_historico, obter_foto_historico, remover_historico, atualizar_historico
+from core.relatorios import adicionar_relatorio, atualizar_relatorio, remover_relatorio, listar_relatorios
+from core.reports import gerar_pdf_maquinas, gerar_pdf_historico, gerar_pdf_componentes, gerar_pdf_relatorios
 
 from core.componentes import (
     listar_componentes_por_maquina,
@@ -18,6 +21,8 @@ from core.componentes import (
 )
 import json
 from markupsafe import Markup
+from flask import request, render_template
+from core.db import run_query
 
 
 app = FastAPI()
@@ -44,7 +49,7 @@ def startup():
 # -------------------- MÁQUINAS --------------------
 @app.get("/maquinas/add", response_class=HTMLResponse)
 def add_maquina_page(request: Request):
-    return templates.TemplateResponse("add_maquina.html", {"request": request})
+    return templates.TemplateResponse("add/add_maquina.html", {"request": request})
 
 @app.post("/maquinas/add")
 def add_maquina(
@@ -146,7 +151,7 @@ def edit_maquina_page(request: Request, id_: int):
         "comentario": g("comentario"),
         "componentes": comps or [],
     }
-    return templates.TemplateResponse("edit_maquina.html", {"request": request, "maquina": maquina_view})
+    return templates.TemplateResponse("edit/edit_maquina.html", {"request": request, "maquina": maquina_view})
 
 @app.post("/maquinas/edit/{id_}")
 def edit_maquina(id_: int,
@@ -221,6 +226,37 @@ def index(request: Request, ordenar_por: str | None = None, direcao: str | None 
 
     return templates.TemplateResponse("index.html", {"request": request, "maquinas": maquinas, "ordenar_por": ordenar_por, "direcao": direcao})
 
+@app.get("/")
+def index():
+    ordenar_por = request.args.get("ordenar_por", "linha")
+    direcao = request.args.get("direcao", "asc")
+    q = request.args.get("q", "").strip()
+
+    allowed = {"linha","nome","usuario","setor","andar","ip","mac","ponto","comentario"}
+    if ordenar_por not in allowed:
+        ordenar_por = "linha"
+    if direcao not in {"asc","desc"}:
+        direcao = "asc"
+
+    sql = """
+      SELECT id, linha, nome, usuario, setor, andar, ip, mac, ponto, comentario
+      FROM maquinas
+    """
+    params = []
+    if q:
+        like = f"%{q}%"
+        sql += """ 
+          WHERE (nome LIKE ? OR usuario LIKE ? OR setor LIKE ?
+                 OR ip LIKE ? OR mac LIKE ? OR ponto LIKE ? OR comentario LIKE ?)
+          COLLATE NOCASE
+        """
+        params = [like]*7
+
+    sql += f" ORDER BY {ordenar_por} {direcao}"
+    maquinas = run_query(sql, params, fetch=True)
+    return render_template("index.html", maquinas=maquinas, ordenar_por=ordenar_por, direcao=direcao, q=q)
+
+
 # -------------------- HISTÓRICO --------------------
 @app.get("/historico", response_class=HTMLResponse)
 def historico_page(request: Request, maquina: int | None = None):
@@ -229,10 +265,19 @@ def historico_page(request: Request, maquina: int | None = None):
     return templates.TemplateResponse("historico.html", {"request": request, "historico": historico, "maquinas": maquinas, "maquina_filter": maquina})
 
 @app.post("/historico/add")
-def add_historico(id_maquina: int = Form(...), data: str = Form(...), hora: str = Form(...),
-                  tecnico: str = Form(...), descricao: str = Form(...)):
-    adicionar_historico(id_maquina, data, hora, tecnico, descricao)
-    return RedirectResponse("/historico", status_code=303)
+async def add_historico(
+    id_maquina: int = Form(...),
+    data: str = Form(...),
+    hora: str = Form(...),
+    tecnico: str = Form(...),
+    descricao: str = Form(...),
+    arquivo: UploadFile | None = File(None),
+):
+    foto_bytes = None
+    if arquivo and arquivo.filename:
+        foto_bytes = await arquivo.read()
+    adicionar_historico(id_maquina, data, hora, tecnico, descricao, foto_bytes)
+    return RedirectResponse(f"/historico?maquina={id_maquina}", status_code=303)
 
 @app.get("/historico/delete/{id_}")
 def delete_historico(id_: int):
@@ -252,17 +297,48 @@ def edit_historico_page(request: Request, id_: int):
     if item is None:
         return RedirectResponse("/", status_code=303)
     # usar o template existente e passar a variável esperada pelo template
-    return templates.TemplateResponse("edit_historico_maquina.html", {"request": request, "historico": item})
+    return templates.TemplateResponse("edit/edit_historico_maquina.html", {"request": request, "historico": item})
 
 @app.post("/historico/edit/{id_}")
-def edit_historico(id_: int,
+async def edit_historico(id_: int,
                    id_maquina: int = Form(...),
                    data: str = Form(...),
                    hora: str = Form(...),
                    tecnico: str = Form(...),
-                   descricao: str = Form(...)):
-    atualizar_historico(id_, data=data, hora=hora, tecnico=tecnico, descricao=descricao)
+                   descricao: str = Form(...),
+                   arquivo: UploadFile | None = File(None)):
+    foto_bytes = None
+    if arquivo and arquivo.filename:
+        foto_bytes = await arquivo.read()
+    atualizar_historico(id_, data=data, hora=hora, tecnico=tecnico, descricao=descricao, foto=foto_bytes)
     return RedirectResponse(f"/historico?maquina={id_maquina}", status_code=303)
+
+def _detect_media_type(data: bytes) -> str:
+    if data.startswith(b"%PDF"):
+        return "application/pdf"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"GIF87a") or data.startswith(b"GIF89a"):
+        return "image/gif"
+    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data.startswith(b"BM"):
+        return "image/bmp"
+    return "application/octet-stream"
+
+@app.get("/historico/foto/{historico_id}")
+def historico_file(historico_id: int):
+    foto_bytes = obter_foto_historico(historico_id)
+    if foto_bytes is None:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
+    # Detecta tipo
+    foto_bytes = bytes(foto_bytes)  # garante bytes (pode ser memoryview)
+    media_type = _detect_media_type(foto_bytes)
+
+    return Response(foto_bytes, media_type=media_type)
 
 # -------------------- COMPONENTES --------------------
 @app.get("/componentes/maquina/{id_}", response_class=HTMLResponse)
@@ -286,3 +362,119 @@ def componentes_delete(id_: int, id_maquina: int):
     remover_componente(id_)
     return RedirectResponse(f"/componentes/maquina/{id_maquina}", status_code=303)
 
+@app.get("/report/componentes")
+def report_componentes():
+    pdf_path = gerar_pdf_componentes()
+    return FileResponse(pdf_path, filename="componentes.pdf")
+
+# -------------------- RELATORIOS --------------------
+@app.get("/relatorios/add", response_class=HTMLResponse)
+def add_relatorio_page(request: Request):
+    return templates.TemplateResponse("add/add_relatorio.html", {"request": request})
+
+def _none_if_blank(s: Optional[str]) -> Optional[str]:
+    return s.strip() if isinstance(s, str) and s.strip() != "" else None
+
+@app.post("/relatorios/add")
+async def add_relatorio(
+    autor: Optional[str] = Form(None),
+    data: Optional[str] = Form(None),
+    hora: Optional[str] = Form(None),
+    comentario: Optional[str] = Form(None),
+    imagem: UploadFile | None = File(None),
+):
+    imagem_bytes = await imagem.read() if (imagem and imagem.filename) else None
+
+    data = _none_if_blank(data)
+    hora = _none_if_blank(hora)
+    if hora and len(hora) == 5:
+        hora = f"{hora}:00"
+    autor = _none_if_blank(autor)
+    comentario = _none_if_blank(comentario)
+
+    adicionar_relatorio(data, hora, comentario, imagem_bytes, autor)
+    return RedirectResponse("/relatorios", status_code=303)
+
+@app.get("/relatorios/delete/{id_}")
+def delete_relatorio(id_: int):
+    remover_relatorio(id_)
+    return RedirectResponse("/relatorios", status_code=303)
+
+@app.get("/report/relatorios")
+def report_relatorios():
+    pdf_path = gerar_pdf_relatorios()
+    return FileResponse(pdf_path, filename="relatorios.pdf")
+
+# Lista de relatórios com ordenação (usa os links do template)
+@app.get("/relatorios", response_class=HTMLResponse)
+def relatorios(request: Request, ordenar_por: str | None = None, direcao: str | None = None):
+    items = listar_relatorios()
+    if ordenar_por:
+        try:
+            def _key(r):
+                v = getattr(r, ordenar_por, None)
+                return (v if isinstance(v, (int, float)) else str(v or "").lower())
+            items = sorted(items, key=_key, reverse=(direcao == "desc"))
+        except Exception:
+            pass
+    return templates.TemplateResponse(
+        "relatorios.html",
+        {"request": request, "relatorios": items, "ordenar_por": ordenar_por, "direcao": direcao},
+    )
+
+@app.get("/relatorios/edit/{id_}", response_class=HTMLResponse)
+def edit_relatorio_page(request: Request, id_: int):
+    items = listar_relatorios()
+    item = next((r for r in items if getattr(r, "id", None) == id_), None)
+    if item is None:
+        return RedirectResponse("/relatorios", status_code=303)
+    # URL do arquivo atual (se existir blob)
+    has_blob = getattr(item, "imagem", None)
+    imagem_url = request.url_for("relatorio_arquivo", id_=id_) if has_blob else None
+    return templates.TemplateResponse("edit/edit_relatorio.html", {"request": request, "relatorio": item, "imagem_url": imagem_url})
+
+@app.post("/relatorios/edit/{id_}")
+async def edit_relatorio(id_: int,
+                    autor: Optional[str] = Form(None),
+                    data: Optional[str] = Form(None),
+                    hora: Optional[str] = Form(None),
+                    comentario: Optional[str] = Form(None),
+                    imagem: UploadFile | None = File(None)):
+    imagem_bytes = await imagem.read() if (imagem and imagem.filename) else None
+
+    data = _none_if_blank(data)
+    hora = _none_if_blank(hora)
+    if hora and len(hora) == 5:
+        hora = f"{hora}:00"
+    autor = _none_if_blank(autor)
+    comentario = _none_if_blank(comentario)
+    
+    atualizar_relatorio(
+    id_,
+    data=data,
+    hora=hora,
+    comentario=comentario,
+    imagem_bytes=imagem_bytes,
+    autor=autor,
+    )
+    return RedirectResponse("/relatorios", status_code=303)
+
+# Arquivo atual do relatório (serve o blob armazenado)
+@app.get("/relatorios/arquivo/{id_}")
+def relatorio_arquivo(id_: int):
+    rows = run_query("SELECT imagem FROM relatorios WHERE id = %s", (id_,), fetch=True)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Relatório não encontrado")
+    try:
+        blob = rows[0]["imagem"]
+    except Exception:
+        try:
+            blob = getattr(rows[0], "imagem", None)
+        except Exception:
+            blob = None
+    if not blob:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
+    data = bytes(blob) if not isinstance(blob, (bytes, bytearray)) else blob
+    media_type = _detect_media_type(data)
+    return Response(data, media_type=media_type, headers={"Content-Disposition": f"inline; filename=relatorio_{id_}"})

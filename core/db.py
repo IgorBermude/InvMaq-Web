@@ -40,9 +40,15 @@ def init_db():
                     data DATE,
                     hora TIME,
                     tecnico TEXT,
-                    descricao TEXT
+                    descricao TEXT,
+                    foto BYTEA
                 );
             """)
+            # Garantir coluna 'foto' (para ambientes já existentes sem recriar a tabela)
+            try:
+                cur.execute("ALTER TABLE historico ADD COLUMN IF NOT EXISTS foto BYTEA;")
+            except Exception:
+                pass
             # Se existir a tabela antiga 'historico_maquinas', migrar os dados para a nova tabela 'historico'
             # Faz a migração apenas dos registros que ainda não existam em 'historico' (evita duplicatas)
             cur.execute("SELECT to_regclass('public.historico_maquinas')")

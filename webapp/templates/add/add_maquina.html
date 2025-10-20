@@ -1,76 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Editar Máquina</h2>
-<form action="/maquinas/edit/{{ maquina.id }}" method="post">
+<h2>Adicionar Máquina</h2>
+<form action="/maquinas/add" method="post">
   <div class="row g-3 mb-4">
     <div class="col">
-      <label class="form-label">Linha</label>
-      <input name="linha" type="number" class="form-control" value="{{ maquina.linha }}" readonly required>
-    </div>
-    <div class="col">
       <label class="form-label">Nome</label>
-      <input name="nome" class="form-control" value="{{ maquina.nome }}">
+      <input name="nome" class="form-control" placeholder="Nome">
     </div>
     <div class="col">
       <label class="form-label">Usuário</label>
-      <input name="usuario" class="form-control" value="{{ maquina.usuario }}">
+      <input name="usuario" class="form-control" placeholder="Usuário">
     </div>
     <div class="col">
       <label class="form-label">Setor</label>
-      <input name="setor" class="form-control" value="{{ maquina.setor }}">
+      <input name="setor" class="form-control" placeholder="Setor">
+    </div>
+    <div class="col">
+      <label class="form-label">Andar</label>
+      <input name="andar" class="form-control" placeholder="Andar">
     </div>
   </div>
 
   <div class="row g-3 mb-4">
     <div class="col">
-      <label class="form-label">Andar</label>
-      <input name="andar" class="form-control" value="{{ maquina.andar }}">
-    </div>
-    <div class="col">
       <label class="form-label">IP</label>
-      <input name="ip" class="form-control" value="{{ maquina.ip }}">
+      <input name="ip" class="form-control" placeholder="IP">
     </div>
     <div class="col">
-      <label class="form-label">Endereço MAC</label>
-      <input name="mac" class="form-control" value="{{ maquina.mac }}">
+      <label class="form-label">MAC</label>
+      <input name="mac" class="form-control" placeholder="MAC">
     </div>
     <div class="col">
       <label class="form-label">Ponto</label>
-      <input name="ponto" class="form-control" value="{{ maquina.ponto }}">
+      <input name="ponto" class="form-control" placeholder="Ponto">
     </div>
   </div>
 
-  <div class="col mb-4">
-    <label class="form-label">Comentário</label>
-    <input name="comentario" class="form-control" value="{{ maquina.comentario }}">
+  <div class="mb-3">
+    <label for="comentario" class="form-label">Comentário</label>
+    <textarea id="comentario" name="comentario" placeholder="Comentário" rows="4" class="form-control">{{ (values.comentario if values and values.comentario is defined else '') }}</textarea>
   </div>
 
-  <!-- ADICIONADO: seção de componentes (renderiza existentes e permite adicionar novos) -->
-  <div class="mb-4">
-    <input type="hidden" name="componentes" id="componentes_input" value='{{ (maquina.componentes or []) | tojson | safe }}'>
+  <div>
+    <!-- Div para adicionar componentes à máquina (envia JSON no campo hidden "componentes") -->
+    <!-- ADICIONADO: campo hidden que guarda o JSON de componentes -->
+    <input type="hidden" name="componentes" id="componentes_input" value="[]">
 
     <div class="d-flex align-items-center mb-2 gap-2">
       <h5 class="mb-0">Componentes</h5>
       <button type="button" id="addComponentBtn" class="btn btn-sm btn-success ms-2">Adicionar Componente +</button>
     </div>
 
-    <div id="componentsArea" class="mb-3"><!-- cards de componentes renderizados aqui --></div>
+    <div id="componentsArea" class="mb-3"><!-- where dynamic forms appear --></div>
   </div>
 
-  <div class="col-auto mt-2">
+  <div class="col-auto mt-2 mb-5">
     <button class="btn btn-primary">Salvar</button>
     <a href="/" class="btn btn-secondary">Cancelar</a>
   </div>
 
   <script>
     (function(){
-      let componentes = []; // mantido só no front até o submit
+      let componentes = []; // mantido apenas em memória até o submit
       let inputHidden = document.getElementById('componentes_input');
       const addBtn = document.getElementById('addComponentBtn');
       const componentsArea = document.getElementById('componentsArea');
-      const mainForm = document.querySelector('form[action="/maquinas/edit/{{ maquina.id }}"]');
+      const mainForm = document.querySelector('form[action="/maquinas/add"]');
 
-      // defensiva: garante o hidden
+      // defensiva: se input ou tabela não existirem por algum motivo, crie-os
       if(!inputHidden && mainForm){
         inputHidden = document.createElement('input');
         inputHidden.type = 'hidden';
@@ -119,10 +116,12 @@
         return card;
       }
 
+      // Ligar botão "Adicionar Componente" para inserir um novo form-card
       if(addBtn){
         addBtn.addEventListener('click', () => {
           const card = createFormCard();
           componentsArea.appendChild(card);
+          // opcional: focus no nome
           const inputNome = card.querySelector('.comp-input-nome');
           if(inputNome) inputNome.focus();
         });
@@ -130,7 +129,7 @@
 
       if(mainForm){
         mainForm.addEventListener('submit', function(){
-          // recria array a partir dos cards no momento do submit
+          // Recria o array a partir dos cards visíveis no momento do submit
           componentes = [];
           const cards = Array.from(componentsArea.querySelectorAll('.card'));
           cards.forEach(card => {
@@ -145,7 +144,7 @@
         });
       }
 
-      // pré-carrega cards com base no hidden (componentes já existentes)
+      // Inicializa cards a partir do hidden se vier pré-carregado
       try {
         const initial = JSON.parse((inputHidden && inputHidden.value) || '[]');
         if(Array.isArray(initial) && initial.length){

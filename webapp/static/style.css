@@ -1,3 +1,84 @@
 body {
   padding: 1rem !important;
 }
+
+.app-title {
+  font-size: clamp(1.8rem, 2.5vw + 0.5rem, 2.6rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 1rem 0 1.25rem;
+  letter-spacing: .3px;
+  color: #0d6efd; /* Azul Bootstrap */
+  text-shadow: 0 1px 0 rgba(13,110,253,.15);
+  position: relative;
+}
+
+.app-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.4rem;
+  width: 56px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #0d6efd, #6f42c1);
+  box-shadow: 0 0 0 1px rgba(13,110,253,.06);
+}
+
+.topbar {
+  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  z-index: 1030; /* acima do conteúdo */
+  position: sticky;  /* fixa no topo ao rolar */
+  top: 0;
+}
+
+/* Título dentro da topbar: reduz margens e tamanho para caber melhor */
+.topbar .app-title {
+  margin: .25rem 0 .5rem;
+  font-size: clamp(1.4rem, 2vw + .2rem, 2rem);
+}
+
+.topbar-brand {
+  font-size: .95rem;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+/* Primary Navigation */
+.primary-navigation .nav {
+  gap: .5rem 1rem; /* Fallback de espaçamento entre itens (além do gap-3 no HTML) */
+  flex-wrap: wrap;
+}
+
+.primary-navigation .nav-link {
+  color: #495057;
+  font-weight: 500;
+  padding: .55rem 1.1rem; /* largura maior */
+  border-radius: .5rem;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.primary-navigation .nav-link:hover {
+  background-color: #f1f3f5;
+  color: #212529;
+  text-decoration: none;
+}
+
+.primary-navigation .nav-link.active {
+  color: #fff !important;
+  background-color: #0d6efd;
+  box-shadow: 0 0 0 .15rem rgba(13,110,253,.15);
+}
+
+/* Mobile */
+@media (max-width: 575.98px) {
+  .topbar .container {
+    padding-top: .75rem;
+    padding-bottom: .75rem;
+  }
+  .topbar .app-title {
+    font-size: 1.25rem;
+  }
+}

@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="mb-4 d-flex gap-2">
-  <a href="/report/maquinas" class="btn btn-success">📄 Exportar PDF</a>
-  <a href="/maquinas/add" class="btn btn-primary">Adicionar</a>
+<div class="mb-2 d-flex gap-2 mt-4">
+  <a href="/report/maquinas" class="btn btn-success">
+    <i class="bi bi-filetype-pdf me-1"></i> Exportar PDF
+  </a>
+  <a href="/report/componentes" class="btn btn-success">
+    <i class="bi bi-filetype-pdf me-1"></i> Exportar PDF de Componentes
+  </a>
+  <a href="/maquinas/add" class="btn btn-primary ms-auto">
+    <i class="bi bi-plus-lg me-1"></i> Adicionar
+  </a>
 </div>
 
 <table class="table table-striped">
@@ -71,7 +78,7 @@
           Comentário {% if ordenar_por == 'comentario' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
         </a>
       </th>
-      <th colspan="3">Ações</th>
+      <th>Ações</th>
     </tr>
   </thead>
   <tbody>
@@ -87,14 +94,18 @@
       <td>{{ m.mac }}</td>
       <td>{{ m.ponto }}</td>
       <td>{{ m.comentario }}</td>
-      <td><a href="/maquinas/edit/{{ m.id }}" class="btn btn-sm btn-warning">Editar</a></td>
-      <td><a href="/maquinas/delete/{{ m.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir esta máquina?');">Excluir</a></td>
-      <td><a href="/historico?maquina={{ m.id }}" class="btn btn-sm btn-info text-white">Histórico</a></td>
+      <td class="text-nowrap" style="min-width: 140px;">
+        <div class="d-grid gap-1">
+          <a href="/maquinas/edit/{{ m.id }}" class="btn btn-sm btn-warning w-100">Editar</a>
+          <a href="/historico?maquina={{ m.id }}" class="btn btn-sm btn-info text-white w-100">Histórico</a>
+          <a href="/maquinas/delete/{{ m.id }}" class="btn btn-sm btn-danger w-100" onclick="return confirm('Tem certeza que deseja excluir esta máquina?');">Excluir</a>
+        </div>
+      </td>
     </tr>
   {% endfor %}
   {% else %}
     <tr>
-      <td colspan="12" class="text-center">Nenhuma máquina cadastrada.</td>
+      <td colspan="10" class="text-center">Nenhuma máquina cadastrada.</td>
     </tr>
   {% endif %}
   </tbody>

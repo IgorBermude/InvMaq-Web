@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container add_relatorio mt-4">
+  <h4 class="mb-3">Adicionar Relatório</h4>
+
+  <form class="add_relatorio-form" method="post" action="/relatorios/add" enctype="multipart/form-data">
+    {% if csrf_token %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+    {% endif %}
+
+    <div class="mb-3">
+      <label for="autor" class="form-label">Autor</label>
+      <input type="text" id="autor" name="autor" class="form-control"
+             value="{{ (values.autor if values and values.autor is defined else '') }}"
+             placeholder="Autor">
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label for="data" class="form-label">Data</label>
+        <input type="date" id="data" name="data" class="form-control"
+               value="{{ (values.data if values and values.data is defined else '') }}">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="hora" class="form-label">Hora</label>
+        <input type="time" id="hora" name="hora" class="form-control"
+               value="{{ (values.hora if values and values.hora is defined else '') }}">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="comentario" class="form-label">Comentário</label>
+      <textarea id="comentario" name="comentario" rows="4" class="form-control" placeholder="Comentário">{{ (values.comentario if values and values.comentario is defined else '') }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label for="imagem" class="form-label">Arquivo</label>
+      <input type="file" id="imagem" name="imagem" class="form-control">
+      {% set current_url = (imagem_url if (imagem_url is defined and imagem_url) else (values.imagem_url if (values is defined and values.imagem_url is defined) else '')) %}
+      {% if current_url %}
+        <div class="mt-2">
+          <a id="arquivo-atual" href="{{ current_url }}" target="_blank" rel="noopener" class="text-decoration-none">Arquivo atual</a>
+        </div>
+      {% endif %}
+      <!-- Previews -->
+      <img id="imagem-preview" alt="Pré-visualização da imagem" class="img-fluid rounded border mt-2 d-none">
+      <div id="pdf-preview" class="ratio ratio-4x3 mt-2 d-none">
+        <iframe id="pdf-frame" title="Pré-visualização do PDF"></iframe>
+      </div>
+      <video id="video-preview" class="w-100 mt-2 d-none" controls></video>
+      <audio id="audio-preview" class="w-100 mt-2 d-none" controls></audio>
+      <pre id="text-preview" class="form-control mt-2 d-none" style="max-height:200px; overflow:auto; white-space:pre-wrap;"></pre>
+      <div id="arquivo-info" class="small text-muted mt-2 d-none"></div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="/relatorios" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const input = document.getElementById('imagem');
+    const linkAtual = document.getElementById('arquivo-atual');
+
+    const imgPrev = document.getElementById('imagem-preview');
+    const pdfPrev = document.getElementById('pdf-preview');
+    const pdfFrame = document.getElementById('pdf-frame');
+    const videoPrev = document.getElementById('video-preview');
+    const audioPrev = document.getElementById('audio-preview');
+    const textPrev = document.getElementById('text-preview');
+    const info = document.getElementById('arquivo-info');
+
+    function hideAll() {
+      [imgPrev, pdfPrev, videoPrev, audioPrev, textPrev, info].forEach(el => {
+        if (!el) return;
+        el.classList.add('d-none');
+      });
+      if (imgPrev) imgPrev.src = '';
+      if (pdfFrame) pdfFrame.src = '';
+      if (videoPrev) videoPrev.src = '';
+      if (audioPrev) audioPrev.src = '';
+      if (textPrev) textPrev.textContent = '';
+      if (info) info.textContent = '';
+    }
+
+    function showByType(url, mimeOrExt, name = '', size = 0) {
+      hideAll();
+      const t = (mimeOrExt || '').toLowerCase();
+      const isImage = t.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/.test(t);
+      const isPdf   = t === 'application/pdf' || /\.pdf$/.test(t);
+      const isVideo = t.startsWith('video/') || /\.(mp4|webm|ogg)$/.test(t);
+      const isAudio = t.startsWith('audio/') || /\.(mp3|wav|ogg)$/.test(t);
+      const isText  = t.startsWith('text/') || /\.(txt|csv|json|md|log)$/.test(t);
+
+      if (isImage && imgPrev) {
+        imgPrev.src = url;
+        imgPrev.classList.remove('d-none');
+      } else if (isPdf && pdfPrev && pdfFrame) {
+        pdfFrame.src = url;
+        pdfPrev.classList.remove('d-none');
+      } else if (isVideo && videoPrev) {
+        videoPrev.src = url;
+        videoPrev.classList.remove('d-none');
+      } else if (isAudio && audioPrev) {
+        audioPrev.src = url;
+        audioPrev.classList.remove('d-none');
+      } else if (isText && textPrev) {
+        // Para arquivo local, o FileReader deve preencher; para URL existente, apenas link
+        if (name) {
+          // name vazio indica URL existente, então não temos conteúdo; cai no info
+          if (info) {
+            const sizeKB = size ? ` (${(size/1024).toFixed(1)} KB)` : '';
+            info.textContent = `${name}${sizeKB}`;
+            info.classList.remove('d-none');
+          }
+        } else {
+          // URL existente sem conteúdo: apenas mostra link via "Arquivo atual"
+          if (info) {
+            info.textContent = 'Pré-visualização de texto indisponível para arquivo remoto. Use o link "Arquivo atual".';
+            info.classList.remove('d-none');
+          }
+        }
+      } else if (info) {
+        const sizeKB = size ? ` (${(size/1024).toFixed(1)} KB)` : '';
+        info.textContent = (name || 'Arquivo') + sizeKB;
+        info.classList.remove('d-none');
+      }
+    }
+
+    function guessTypeFromUrl(url) {
+      const m = /\.([a-z0-9]+)(?:\?|#|$)/i.exec(url || '');
+      const ext = m ? m[1].toLowerCase() : '';
+      const map = {
+        png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml',
+        pdf:'application/pdf',
+        mp4:'video/mp4', webm:'video/webm', ogg:'video/ogg',
+        mp3:'audio/mpeg', wav:'audio/wav', oga:'audio/ogg', ogg:'audio/ogg',
+        txt:'text/plain', csv:'text/csv', json:'application/json', md:'text/markdown', log:'text/plain'
+      };
+      return map[ext] || ext; // retorna extensão se desconhecido
+    }
+
+    if (input) {
+      input.addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const mime = file.type || '';
+        if (mime.startsWith('text/')) {
+          // Ler conteúdo de texto para prévia
+          const reader = new FileReader();
+          reader.onload = () => {
+            hideAll();
+            if (textPrev) {
+              const content = String(reader.result || '');
+              textPrev.textContent = content.slice(0, 5000); // limita a 5k chars
+              textPrev.classList.remove('d-none');
+            }
+          };
+          reader.readAsText(file, 'utf-8');
+        } else {
+          showByType(url, mime, file.name, file.size);
+        }
+      });
+    }
+
+    // Pré-visualização do arquivo já existente (se houver)
+    document.addEventListener('DOMContentLoaded', function () {
+      if (linkAtual && linkAtual.href) {
+        const url = linkAtual.href;
+        const type = guessTypeFromUrl(url);
+        showByType(url, type);
+      }
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-2 d-flex gap-2 mt-4">
+  <a href="/report/relatorios" class="btn btn-success">
+    <i class="bi bi-filetype-pdf me-1"></i> Exportar PDF de Relatórios
+  </a>
+  <a href="/relatorios/add" class="btn btn-primary ms-auto">
+    <i class="bi bi-plus-lg me-1"></i> Adicionar
+  </a>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'autor' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/relatorios?ordenar_por=autor&direcao={{ toggled }}" class="text-decoration-none">
+          Autor {% if ordenar_por == 'autor' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'data' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/relatorios?ordenar_por=data&direcao={{ toggled }}" class="text-decoration-none">
+          Data {% if ordenar_por == 'data' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'hora' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/relatorios?ordenar_por=hora&direcao={{ toggled }}" class="text-decoration-none">
+          Hora {% if ordenar_por == 'hora' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>
+        {% set toggled = 'asc' %}
+        {% if ordenar_por == 'comentario' and direcao == 'asc' %}{% set toggled = 'desc' %}{% endif %}
+        <a href="/relatorios?ordenar_por=comentario&direcao={{ toggled }}" class="text-decoration-none">
+          Comentário {% if ordenar_por == 'comentario' %}{% if direcao == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+        </a>
+      </th>
+      <th>Arquivo</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if relatorios %}
+      {% for r in relatorios %}
+        <tr>
+          <td>{{ r.autor|default('-', true) }}</td>
+          <td>{{ r.data|default('-', true) }}</td>
+          <td>{{ r.hora|default('-', true) }}</td>
+          <td>{{ r.comentario|default('-', true) }}</td>
+          <td>
+            {% if r.imagem %}
+              <a href="/relatorios/arquivo/{{ r.id }}" target="_blank" class="btn btn-sm btn-info">Ver Arquivo</a>
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </td>
+          <td class="text-nowrap">
+            <a href="/relatorios/edit/{{ r.id }}" class="btn btn-sm btn-warning me-2">Editar</a>
+            <a href="/relatorios/delete/{{ r.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir este relatório?');">Excluir</a>
+          </td>
+        </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="4" class="text-center">Nenhum relatório encontrado.</td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+
+{% set img = imagem_url or imagem %}
+{% if img %}
+<div class="mt-3 text-center">
+  <img src="{{ img }}" alt="Imagem" class="img-fluid">
+</div>
+{% endif %}
+
+{% endblock %}

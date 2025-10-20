@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Editar histórico</h2>
+<form action="/historico/edit/{{ historico.id }}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="id_maquina" value="{{ historico.id_maquina }}">
+    <div class="row g-2 mb-4">
+        <div class="col">
+            <label class="form-label">Data</label>
+      <input name="data" type="date" class="form-control" value="{{ historico.data.strftime('%Y-%m-%d') if historico.data and historico.data.strftime is defined else (historico.data[:10] if historico.data is string else historico.data) }}" required>
+        </div>
+        <div class="col">
+            <label class="form-label">Hora</label>
+      <input name="hora" type="time" class="form-control" value="{{ historico.hora.strftime('%H:%M') if historico.hora and historico.hora.strftime is defined else (historico.hora[:5] if historico.hora is string else historico.hora) }}" required>
+        </div>
+        <div class="col">
+            <label class="form-label">Responsável</label>
+            <input name="tecnico" class="form-control" value="{{ historico.tecnico }}">
+        </div>
+    </div>
+    <div class="col mb-4">
+        <label class="form-label">Descrição</label>
+        <input name="descricao" class="form-control" value="{{ historico.descricao }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Arquivo Atual:</label>
+        <div class="border rounded" style="height:580px; overflow:hidden">
+            <iframe 
+                id="previewFrame"
+                src="{{ '/historico/foto/' ~ historico.id if historico.foto else 'about:blank' }}"
+                data-original-src="{{ '/historico/foto/' ~ historico.id if historico.foto else '' }}"
+                title="Arquivo do historico"
+                width="100%"
+                height="100%"
+                style="border:0;">
+            </iframe>
+        </div>
+        {% if not historico.foto %}
+            <p id="noFileMsg">Nenhum arquivo anexado.</p>
+        {% endif %}
+    </div>
+    
+    <div class="col-auto mt-2 mb-4">
+        <input type="file" id="arquivo" name="arquivo" accept=".pdf,image/*" class="d-none">
+        <button type="button" class="btn btn-success" id="btnSelectFile">Selecionar outro arquivo</button>
+        <span id="fileName" class="ms-2 text-muted"></span>
+    </div>
+
+    <div class="col-auto mt-2">
+        <button class="btn btn-primary">Salvar</button>
+        <a href="/historico?maquina={{ historico.id_maquina }}" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+<script>
+  (function () {
+    const btn = document.getElementById('btnSelectFile');
+    const input = document.getElementById('arquivo');
+    const nameEl = document.getElementById('fileName');
+    const frame = document.getElementById('previewFrame');
+    const container = document.getElementById('previewContainer');
+    const noFileMsg = document.getElementById('noFileMsg');
+
+    let currentBlobUrl = null;
+
+    if (btn && input) {
+      btn.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => {
+        const f = input.files && input.files[0];
+        nameEl.textContent = f ? f.name : '';
+
+        if (f) {
+          if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+          currentBlobUrl = URL.createObjectURL(f);
+          frame.src = currentBlobUrl;         // Pré-visualiza no iframe
+          container.style.display = 'block';  // Garante que apareça mesmo se não tinha arquivo
+          if (noFileMsg) noFileMsg.style.display = 'none';
+        } else {
+          if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+          const original = frame.dataset.originalSrc;
+          if (original) {
+            frame.src = original;             // Volta para o arquivo do servidor
+            container.style.display = 'block';
+          } else {
+            frame.src = 'about:blank';        // Sem arquivo e sem seleção
+            container.style.display = 'none';
+            if (noFileMsg) noFileMsg.style.display = '';
+          }
+        }
+      });
+    }
+  })();
+</script>
+
+{% endblock %}

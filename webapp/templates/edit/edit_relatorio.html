@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Editar Relatório</h2>
+<form action="" method="post" enctype="multipart/form-data">
+  {% if csrf_token is defined %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% endif %}
+  <div class="row g-3 mb-4">
+    <div class="col">
+      <label class="form-label">Autor</label>
+        <input name="autor" class="form-control" value="{{ relatorio.autor }}" required>
+    </div>
+    <div class="col">
+        <label class="form-label">Data</label>
+    <input name="data" type="date" class="form-control"
+       value="{{ relatorio.data.strftime('%Y-%m-%d') if relatorio.data and relatorio.data.strftime is defined else (relatorio.data[:10] if relatorio.data else '') }}"
+       required>
+    </div>
+    <div class="col">
+        <label class="form-label">Hora</label>
+    <input name="hora" type="time" class="form-control"
+       value="{{ relatorio.hora.strftime('%H:%M') if relatorio.hora and relatorio.hora.strftime is defined else (relatorio.hora[:5] if relatorio.hora else '') }}">
+    </div>
+  </div>
+    <div class="mb-3">
+        <label for="comentario" class="form-label">Comentário</label>
+        <textarea id="comentario" name="comentario" placeholder="Comentário" rows="4" class="form-control">{{ relatorio.comentario }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label for="imagem" class="form-label">Alterar arquivo</label>
+      <input type="file" id="imagem" name="imagem" class="form-control"
+            accept="image/*,application/pdf,video/*,audio/*,text/plain">
+
+      {% set current_url = url_for('relatorio_arquivo', id_=values.id) if (values is defined and values.id is defined) else '' %}
+
+      {% if current_url %}
+        <a id="arquivo-atual" href="{{ current_url }}" target="_blank" class="d-none">Arquivo atual</a>
+      {% endif %}
+
+      <!-- Previews -->
+      <img id="imagem-preview" alt="Pré-visualização da imagem" class="img-fluid rounded border mt-2 d-none">
+      <div id="pdf-preview" class="ratio ratio-4x3 mt-2 d-none">
+        <iframe id="pdf-frame" title="Pré-visualização do PDF"></iframe>
+      </div>
+      <video id="video-preview" class="w-100 mt-2 d-none" controls></video>
+      <audio id="audio-preview" class="w-100 mt-2 d-none" controls></audio>
+      <pre id="text-preview" class="form-control mt-2 d-none"
+          style="max-height:200px; overflow:auto; white-space:pre-wrap;"></pre>
+      <div id="arquivo-info" class="small text-muted mt-2 d-none"></div>
+    </div>
+
+    <div class="col-auto mt-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="/relatorios" class="btn btn-secondary ms-2">Cancelar</a>
+    </div>
+</form>
+
+<script>
+  (function () {
+    const input = document.getElementById('imagem');
+    const linkAtual = document.getElementById('arquivo-atual');
+
+    const imgPrev = document.getElementById('imagem-preview');
+    const pdfPrev = document.getElementById('pdf-preview');
+    const pdfFrame = document.getElementById('pdf-frame');
+    const videoPrev = document.getElementById('video-preview');
+    const audioPrev = document.getElementById('audio-preview');
+    const textPrev = document.getElementById('text-preview');
+    const info = document.getElementById('arquivo-info');
+
+    function hideAll() {
+      [imgPrev, pdfPrev, videoPrev, audioPrev, textPrev, info].forEach(el => {
+        if (!el) return;
+        el.classList.add('d-none');
+      });
+      if (imgPrev) imgPrev.src = '';
+      if (pdfFrame) pdfFrame.src = '';
+      if (videoPrev) videoPrev.src = '';
+      if (audioPrev) audioPrev.src = '';
+      if (textPrev) textPrev.textContent = '';
+      if (info) info.textContent = '';
+    }
+
+    function showByType(url, mimeOrExt, name = '', size = 0) {
+      hideAll();
+      const t = (mimeOrExt || '').toLowerCase();
+      const isImage = t.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/.test(t);
+      const isPdf   = t === 'application/pdf' || /\.pdf$/.test(t);
+      const isVideo = t.startsWith('video/') || /\.(mp4|webm|ogg)$/.test(t);
+      const isAudio = t.startsWith('audio/') || /\.(mp3|wav|ogg)$/.test(t);
+      const isText  = t.startsWith('text/') || /\.(txt|csv|json|md|log)$/.test(t);
+
+      if (isImage && imgPrev) {
+        imgPrev.src = url;
+        imgPrev.classList.remove('d-none');
+      } else if (isPdf && pdfPrev && pdfFrame) {
+        pdfFrame.src = url;
+        pdfPrev.classList.remove('d-none');
+      } else if (isVideo && videoPrev) {
+        videoPrev.src = url;
+        videoPrev.classList.remove('d-none');
+      } else if (isAudio && audioPrev) {
+        audioPrev.src = url;
+        audioPrev.classList.remove('d-none');
+      } else if (isText && textPrev) {
+        // Para arquivo local, o FileReader deve preencher; para URL existente, apenas link
+        if (name) {
+          // name vazio indica URL existente, então não temos conteúdo; cai no info
+          if (info) {
+            const sizeKB = size ? ` (${(size/1024).toFixed(1)} KB)` : '';
+            info.textContent = `${name}${sizeKB}`;
+            info.classList.remove('d-none');
+          }
+        } else {
+          // URL existente sem conteúdo: apenas mostra link via "Arquivo atual"
+          if (info) {
+            info.textContent = 'Pré-visualização de texto indisponível para arquivo remoto. Use o link "Arquivo atual".';
+            info.classList.remove('d-none');
+          }
+        }
+      } else if (info) {
+        const sizeKB = size ? ` (${(size/1024).toFixed(1)} KB)` : '';
+        info.textContent = (name || 'Arquivo') + sizeKB;
+        info.classList.remove('d-none');
+      }
+    }
+
+    function guessTypeFromUrl(url) {
+      const m = /\.([a-z0-9]+)(?:\?|#|$)/i.exec(url || '');
+      const ext = m ? m[1].toLowerCase() : '';
+      const map = {
+        png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml',
+        pdf:'application/pdf',
+        mp4:'video/mp4', webm:'video/webm', ogg:'video/ogg',
+        mp3:'audio/mpeg', wav:'audio/wav', oga:'audio/ogg', ogg:'audio/ogg',
+        txt:'text/plain', csv:'text/csv', json:'application/json', md:'text/markdown', log:'text/plain'
+      };
+      return map[ext] || ext; // retorna extensão se desconhecido
+    }
+
+    if (input) {
+      input.addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const mime = file.type || '';
+        if (mime.startsWith('text/')) {
+          // Ler conteúdo de texto para prévia
+          const reader = new FileReader();
+          reader.onload = () => {
+            hideAll();
+            if (textPrev) {
+              const content = String(reader.result || '');
+              textPrev.textContent = content.slice(0, 5000); // limita a 5k chars
+              textPrev.classList.remove('d-none');
+            }
+          };
+          reader.readAsText(file, 'utf-8');
+        } else {
+          showByType(url, mime, file.name, file.size);
+        }
+      });
+    }
+
+    // Pré-visualização do arquivo já existente (se houver)
+    document.addEventListener('DOMContentLoaded', function () {
+      if (linkAtual && linkAtual.href) {
+        const url = linkAtual.href;
+        const type = guessTypeFromUrl(url);
+        showByType(url, type);
+      }
+    });
+  })();
+</script>
+{% endblock %}

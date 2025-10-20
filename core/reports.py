@@ -83,3 +83,27 @@ def gerar_pdf_historico():
 
     col_widths = [22*mm, 18*mm, 50*mm, 35*mm, 140*mm]
     return _make_table(data, col_widths=col_widths, title="Relatório de Histórico")
+
+def gerar_pdf_componentes():
+    rows = run_query(
+        "SELECT c.nome, c.data_aquisicao, c.data_expiracao, c.observacao, m.nome AS maquina, m.ip "
+        "FROM componentes c LEFT JOIN maquinas m ON c.id_maquina = m.id "
+        "ORDER BY m.linha, m.nome, c.data_aquisicao",
+        fetch=True,
+    )
+    data = [["Nome", "Data de Aquisição", "Data de Expiração", "Comentário", "Máquina", "IP"]] + [
+        [r["nome"], r["data_aquisicao"], r["data_expiracao"], r["observacao"], r["maquina"], r["ip"]] for r in rows
+    ]
+    col_widths = [10*mm, 50*mm, 30*mm, 80*mm, 50*mm, 40*mm]
+    return _make_table(data, col_widths=col_widths, title="Relatório de Componentes")
+
+def gerar_pdf_relatorios():
+    rows = run_query(
+        "SELECT autor, data, hora, comentario FROM relatorios ORDER BY data DESC, hora DESC",
+        fetch=True,
+    )
+    data = [["Autor", "Data", "Hora", "Comentário"]] + [
+        [r["autor"], r["data"], r["hora"], r["comentario"]] for r in rows
+    ]
+    col_widths = [25*mm, 25*mm, 25*mm, 180*mm]
+    return _make_table(data, col_widths=col_widths, title="Relatório de Registros")

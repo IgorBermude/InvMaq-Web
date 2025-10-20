@@ -11,7 +11,7 @@
     <a href="/" class="btn btn-secondary">← Voltar</a>
   </div>
 
-  <form id="addHistoricoForm" action="/historico/add" method="post" class="mb-4">
+  <form id="addHistoricoForm" action="/historico/add" method="post" class="mb-4" enctype="multipart/form-data">
     <input type="hidden" name="id_maquina" value="{{ maquina_filter }}">
     <div class="row g-2 mb-4">
       <div class="col">
@@ -31,7 +31,12 @@
       <label class="form-label">Descrição</label>
       <input name="descricao" class="form-control" placeholder="Descrição" required>
     </div>
-    <div class="col-auto mt-2"><button class="btn btn-primary">Adicionar</button></div>
+    <div class="col-auto mt-2 d-flex align-items-start gap-3 flex-wrap">
+      <button class="btn btn-primary" id="btnSubmitHistorico">Adicionar</button>
+      <button type="button" class="btn btn-success" id="btnSelectFile">Adicionar Arquivo</button>
+      <input type="file" name="arquivo" id="arquivoInput" accept="image/*,.pdf" class="d-none">
+    </div>
+    <div id="arquivoPreview" class="mt-3"></div>
   </form>
 
   <script>
@@ -85,6 +90,61 @@
         alert('Erro de rede ao excluir.');
       }
     });
+
+    const btnSelectFile = document.getElementById('btnSelectFile');
+    const inputFile = document.getElementById('arquivoInput');
+    const preview = document.getElementById('arquivoPreview');
+
+    if (btnSelectFile && inputFile) {
+      btnSelectFile.addEventListener('click', () => inputFile.click());
+      inputFile.addEventListener('change', () => {
+        preview.innerHTML = '';
+        const f = inputFile.files && inputFile.files[0];
+        if (!f) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'border rounded p-3 bg-light w-100';
+        const title = document.createElement('div');
+        title.className = 'fw-semibold mb-2';
+        title.textContent = 'Arquivo selecionado: ' + f.name + ' (' + Math.round(f.size/1024) + ' KB)';
+        wrap.appendChild(title);
+
+        if (f.type.startsWith('image/')) {
+          const img = document.createElement('img');
+            img.style.maxWidth = '220px';
+            img.style.maxHeight = '220px';
+            img.style.objectFit = 'cover';
+            img.alt = f.name;
+            img.src = URL.createObjectURL(f);
+            wrap.appendChild(img);
+        } else if (f.type === 'application/pdf') {
+          const pdfInfo = document.createElement('div');
+          pdfInfo.innerHTML = 'PDF selecionado. <span class="text-muted">Será enviado ao salvar.</span>';
+          const embed = document.createElement('embed');
+          embed.type = 'application/pdf';
+          embed.style.width = '300px';
+          embed.style.height = '320px';
+          embed.src = URL.createObjectURL(f);
+          wrap.appendChild(pdfInfo);
+          wrap.appendChild(embed);
+        } else {
+          const generic = document.createElement('div');
+          generic.textContent = 'Tipo de arquivo: ' + (f.type || 'desconhecido');
+          wrap.appendChild(generic);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-sm btn-outline-danger mt-3 me-3';
+        removeBtn.textContent = 'Remover arquivo';
+        removeBtn.addEventListener('click', () => {
+          inputFile.value = '';
+          preview.innerHTML = '';
+        });
+        wrap.appendChild(removeBtn);
+
+        preview.appendChild(wrap);
+      });
+    }
   });
   </script>
 
@@ -99,6 +159,7 @@
         <th>Descrição</th>
         <th>IP</th>
         <th>MAC</th>
+        <th>Arquivo</th>
         <th colspan="2">Ações</th>
       </tr>
     </thead>
@@ -115,6 +176,14 @@
             <td>{{ m.mac }}</td>
           {% endif %}
         {% endfor %}
+        <td>
+          {% set tem_foto = h.foto if h.foto is defined else (h['foto'] if 'foto' in h else None) %}
+          {% if tem_foto %}
+            <a href="/historico/foto/{{h.id}}" target="_blank" class="btn btn-sm btn-info">Ver Arquivo</a>
+          {% else %}
+            <span class="text-muted">N/A</span>
+          {% endif %}
+        </td>
         <td><a href="/historico/edit/{{h.id}}" class="btn btn-sm btn-warning">Editar</a></td>
         <td><a href="/historico/delete/{{h.id}}" class="btn btn-sm btn-danger delete-historico" data-confirm="Tem certeza que deseja excluir este item do histórico?">Excluir</a></td>
       </tr>
