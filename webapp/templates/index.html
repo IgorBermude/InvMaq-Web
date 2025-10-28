@@ -94,11 +94,20 @@
       <td>{{ m.mac }}</td>
       <td>{{ m.ponto }}</td>
       <td>{{ m.comentario }}</td>
-      <td class="text-nowrap" style="min-width: 140px;">
+      <td class="text-nowrap" style="min-width: 40px;">
         <div class="d-grid gap-1">
-          <a href="/maquinas/edit/{{ m.id }}" class="btn btn-sm btn-warning w-100">Editar</a>
-          <a href="/historico?maquina={{ m.id }}" class="btn btn-sm btn-info text-white w-100">Histórico</a>
-          <a href="/maquinas/delete/{{ m.id }}" class="btn btn-sm btn-danger w-100" onclick="return confirm('Tem certeza que deseja excluir esta máquina?');">Excluir</a>
+          <a href="/maquinas/edit/{{ m.id }}" class="btn btn-sm btn-warning w-100 rounded-pill" aria-label="Editar" title="Editar">
+            <i class="bi bi-pencil-square"></i>
+            Editar
+          </a>
+          <a href="/historico?maquina={{ m.id }}" class="btn btn-sm btn-info text-white w-100 rounded-pill" aria-label="Histórico" title="Histórico">
+            <i class="bi bi-clock-history"></i>
+            Histórico
+          </a>
+          <a href="/maquinas/delete/{{ m.id }}" class="btn btn-sm btn-danger w-100 rounded-pill" onclick="return confirm('Tem certeza que deseja excluir esta máquina?');" aria-label="Excluir" title="Excluir">
+            <i class="bi bi-trash"></i>
+            Excluir
+          </a>
         </div>
       </td>
     </tr>

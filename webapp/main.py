@@ -18,6 +18,7 @@ from core.componentes import (
     atualizar_componente,
     remover_componente,
     get_componente,
+    listar_componentes_expirando,
 )
 import json
 from markupsafe import Markup
@@ -45,6 +46,14 @@ templates.env.filters["tojson"] = _tojson_filter
 @app.on_event("startup")
 def startup():
     init_db()
+
+
+def _get_alertas_componentes():
+    """Busca componentes que expiram em até 10 dias para exibir alertas no topo das páginas."""
+    try:
+        return listar_componentes_expirando(10)
+    except Exception:
+        return []
 
 # -------------------- MÁQUINAS --------------------
 @app.get("/maquinas/add", response_class=HTMLResponse)
@@ -224,7 +233,7 @@ def index(request: Request, ordenar_por: str | None = None, direcao: str | None 
         except Exception:
             pass
 
-    return templates.TemplateResponse("index.html", {"request": request, "maquinas": maquinas, "ordenar_por": ordenar_por, "direcao": direcao})
+    return templates.TemplateResponse("index.html", {"request": request, "maquinas": maquinas, "ordenar_por": ordenar_por, "direcao": direcao, "alertas_componentes": _get_alertas_componentes()})
 
 @app.get("/")
 def index():
@@ -254,7 +263,7 @@ def index():
 
     sql += f" ORDER BY {ordenar_por} {direcao}"
     maquinas = run_query(sql, params, fetch=True)
-    return render_template("index.html", maquinas=maquinas, ordenar_por=ordenar_por, direcao=direcao, q=q)
+    return render_template("index.html", maquinas=maquinas, ordenar_por=ordenar_por, direcao=direcao, q=q, alertas_componentes=listar_componentes_expirando(10))
 
 
 # -------------------- HISTÓRICO --------------------
@@ -419,7 +428,7 @@ def relatorios(request: Request, ordenar_por: str | None = None, direcao: str | 
             pass
     return templates.TemplateResponse(
         "relatorios.html",
-        {"request": request, "relatorios": items, "ordenar_por": ordenar_por, "direcao": direcao},
+        {"request": request, "relatorios": items, "ordenar_por": ordenar_por, "direcao": direcao, "alertas_componentes": _get_alertas_componentes()},
     )
 
 @app.get("/relatorios/edit/{id_}", response_class=HTMLResponse)

@@ -35,6 +35,23 @@
   </div>
 
   <div class="container mt-3">
+    {% if alertas_componentes and alertas_componentes|length > 0 %}
+      <div class="alert alert-warning d-flex align-items-start gap-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+        <div>
+          <div class="fw-semibold">Atenção: componentes próximos da expiração</div>
+          <ul class="mb-0 ps-3">
+            {% for c in alertas_componentes %}
+              <li>
+                <strong>{{ c.nome }}</strong>
+                {% if c.maquina_nome %} em "{{ c.maquina_nome }}"{% endif %}
+                {% if c.data_expiracao %} expira em {{ c.dias_restantes }} dia{{ 's' if c.dias_restantes != 1 else '' }} ({{ c.data_expiracao }}){% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </div>
 </body>
